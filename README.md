@@ -1,4 +1,4 @@
-# arduino-bird-scarer
+# arduino-bird-scarer - utilising the TMRpcm library and SD library
 Code for an Arduino project to scare birds away based upon initial ideas and development by Nick Allen in 2015. It uses several sound files played at random intervals.
 
 This fork of the project uses the latest TMRpcm library and works as found here on the Arduino UNO R3 (and with mods for (Mega and Nano). 
