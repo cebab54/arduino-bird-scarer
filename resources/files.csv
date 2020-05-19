@@ -1,24 +1,24 @@
-// 1.wav = blackbird-splutter
-// 2.wav = hawk1
-// 3.wav = red-tailed-hawk-scream
-// 4.wav = robin-distress
-// 5.wav = blackbird-warning
-// 6.wav = owl-agitated
-// 7.wav = red-tailed-hawk2
-// 8.wav = robin-warning
-// 9.wav = falcon
-// 10.wav = owl-contact
-// 11.wav = robin-alarm
-//  wavFile, dayWeight, nightWeight, duration, minTimes
-1.wav,5,5,7,4
-2.wav,7,5,24,2
-3.wav,8,5,22,2
-4.wav,16,10,16,2
-5.wav,8,5,3,8
-6.wav,2,22,17,2
-7.wav,8,5,14,3
-8.wav,17,10,15,3
-9.wav,7,5,3,7
-10.wav,4,18,28,2
-11.wav,18,10,15,3
-// EOF
+1,8,5,5,6,blackbird-splutter
+2,12,5,21,2,hawk1
+3,8,5,21,2,ed-tailed-hawk-scream
+5,12,5,1,20,blackbird-warning
+6,5,18,14,3,owl-agitated
+7,8,5,11,3,red-tailed-hawk2
+8,12,5,13,2,robin-warning
+9,15,8,86,1,kestrel-warning
+10,4,18,27,3,owl-contact
+11,18,5,13,4,robin-alarm
+12,9,5,32,2,Blackbird_Alarm
+13,17,6,42,2,Blue-Tits
+14,14,8,10,5,Rook-Alarm
+15,15,5,83,1,Rook-call2
+16,20,6,3,10,Blackbird-Alarm-rattle
+17,10,5,63,1,coal-tit-Alarm
+18,5,15,65,1,Tawny-Owl-Alarm
+19,7,16,89,1,Short-eared-Owl
+20,10,5,86,1,Kestrel_alarm
+21,18,5,41,2,Jackdaw
+22,18,5,58,2,Crow_alarm
+23,5,18,4,4,Foxsquall
+24,5,18,32,3,Red-Fox
+25,5,18,65,1,Red-Fox-atypical,,,,
