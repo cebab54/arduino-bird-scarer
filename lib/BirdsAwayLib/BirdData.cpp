@@ -4,8 +4,8 @@
 BirdData::BirdData(){
 }
 
-BirdData::BirdData(char* wavFile, int dayWeight, int nightWeight, int duration, int minTimes){
-  _wavFile = wavFile;
+BirdData::BirdData(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
+  _wavNr = wavNr;
   _dayWeight = dayWeight;
   _nightWeight = nightWeight;
   _duration = duration;
@@ -15,22 +15,22 @@ BirdData::BirdData(char* wavFile, int dayWeight, int nightWeight, int duration, 
 //<<destructor>>
 BirdData::~BirdData(){/*nothing to destruct*/}
  
-void BirdData::put(char* wavFile, int dayWeight, int nightWeight, int duration, int minTimes){
-  _wavFile = wavFile;
+void BirdData::put(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
+  _wavNr = wavNr;
   _dayWeight = dayWeight;
   _nightWeight = nightWeight;
   _duration = duration;
   _minTimes = minTimes;
 }
 
-// get _wavFile
-char* BirdData::getWavFile(){
-  return _wavFile;
+// get _wavNr
+int BirdData::getWavNr(){
+  return _wavNr;
 }
 
-// set _wavFile
-void BirdData::setWavFile(char* wavFile){
-  _wavFile = wavFile;
+// set _wavNr
+void BirdData::setWavNr(int wavNr){
+  _wavNr = wavNr;
 }
 
 // get _dayWeight

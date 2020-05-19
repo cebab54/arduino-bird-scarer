@@ -14,21 +14,21 @@ Contributors:
 
 class BirdData {
   private:
-    char* _wavFile;
+    volatile int _wavNr;
     volatile int _dayWeight;
     volatile int _nightWeight;
     volatile int _duration;
     volatile int _minTimes;
   public:
     BirdData();
-    BirdData(char* wavFile, int dayWeight, int nightWeight, int duration, int minTimes);
+    BirdData(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes);
     ~BirdData();
-    void put(char* wavFile, int dayWeight, int nightWeight, int duration, int minTimes);
-    char* getWavFile();
+    void put(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes);
+    int getWavNr();
     int getWeight(char when);
     int getDuration();
     int getMinTimes();
-    void setWavFile(char* wavFile);
+    void setWavNr(int wavNr);
     void setDayWeight(int dayWeight);
     void setNightWeight(int dayWeight);
     void setDuration(int duration);
