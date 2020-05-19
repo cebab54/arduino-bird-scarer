@@ -1,187 +1,240 @@
-#include <SimpleSDAudio.h>
+#include <SD.h>             // need to include the SD library
+#include <TMRpcm.h>         // and also need to include the TMRpcm Audio library
+#define  pcmConfig_h        // and its configuration sketch if you need to modify any configuration parameters
+#include <SPI.h>
 #include <BirdData.h>
 
-const int SD_CARD_CS_PIN = 10;
-const int PHOTOCELL_PIN = 0;
+#define SD_ChipSelectPin 4  // amend digital pin number if applicable
+#define LDR_ChipSelectPin 0 // amend analogue pin number if applicable
+#define DIGI_SpeakerPin 9   // choose one of pins 5,6,11 or 46 on the Mega, or pin 9 on Uno, Nano, etc
+#define AUDIO_Volume 1      // amend output pin volume to suit your audio setup (range is 0-7)
+                            // generally I found that 3 is maximum without distortion from an Amplifier
 
-const unsigned int DATA_SIZE = 10;
+#define EXT ".wav"          // Sound clips should be saved using Audacity (Freeware) as 8 bit mono 'wav' clips sampled at 32000Hz
+                            // Please make sure that sound clips do NOT contain any METADATA (Reset and Clear all fields)
+                            // In Audacity, "File/Export/Export as WAV". File should be named as per DOS 8.3 format for SD Card formatted to FAT16
+                            // Export clips using dropdown option "Save as Type" set to: 'Other uncompressed files' and with
+                            // Header set to: "WAV (Microsoft)"; and Encoding set to: "unsigned 8-bit PCM".
+
+Sd2Card card;               // SD Card (Maximum Partition size 4GB) should be freshly formatted using 'Overwrite format' (NOT Fast Format) to FAT16
+                            // using SD Association's "SD Card Formatter" (Freeware)
+TMRpcm audio;
+
+const unsigned int DATA_SIZE = 11;
 const boolean DEBUG = false;
-
-
 BirdData data[DATA_SIZE];
-
-// Create static buffer 
-#define BIGBUFSIZE (2*512)  // bigger than 2*512 is often only possible on Arduino megas!
-uint8_t bigbuf[BIGBUFSIZE];
 
 // helper function to determine free ram at runtime
 int freeRam () {
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
-void(* resetFunc) (void) = 0;//declare reset function at address 0
+void(* resetFunc) (void) = 0; //declare reset function at address 0
 
 void setup() {
-  Serial.begin(9600);
-  delay(2000);
+
+  audio.speakerPin = DIGI_SpeakerPin;
+  Serial.begin(115200);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
   Serial.print("Free Ram: "); Serial.flush();
   Serial.println(freeRam()); Serial.flush();
-  
-  // Setting the buffer manually for more flexibility
-  SdPlay.setWorkBuffer(bigbuf, BIGBUFSIZE); 
-
-  Serial.print("\nInitializing SimpleSDAudio V" SSDA_VERSIONSTRING " ..."); Serial.flush();
-  
-  // If your SD card CS-Pin is not at Pin 4, enable and adapt the following line:
-  SdPlay.setSDCSPin(SD_CARD_CS_PIN);
-  
-    // Select between SSDA_MODE_FULLRATE or SSDA_MODE_HALFRATE (62.5kHz or 31.25kHz)
-  // and the output modes SSDA_MODE_MONO_BRIDGE, SSDA_MODE_MONO or SSDA_MODE_STEREO
-  if (!SdPlay.init(SSDA_MODE_HALFRATE | SSDA_MODE_MONO | SSDA_MODE_AUTOWORKER)) {
-    Serial.println("initialization failed. Things to check:"); Serial.flush();
-    Serial.println("* is a card is inserted?"); Serial.flush();
-    Serial.println("* Is your wiring correct?"); Serial.flush();
-    Serial.println("* maybe you need to change the chipSelect pin to match your shield or module?"); Serial.flush();
-    Serial.print("Error code: "); Serial.flush();
-    Serial.println(SdPlay.getLastError()); Serial.flush();
-    
-    delay(10000);
-    resetFunc();
-    
-    // while(1);
+  Serial.println("Initializing SD card...");
+  // if (!card.init(SPI_HALF_SPEED, SD_ChipSelectPin)) {
+  // check if an SD card is present and can be initialized:
+  if (!SD.begin(SD_ChipSelectPin)) {
+    Serial.println("SD Card initialization failed:");
+    Serial.println("* is a card inserted?");
+    Serial.println("* is your wiring correct?");
+    Serial.println("* did you change the chipSelect pin to match your shield or module?");
+    while (1);
   } else {
-    Serial.println("Wiring is correct and a card is present."); Serial.flush();
+    Serial.print("Card type found is: ");
+    switch (card.type()) {
+      case SD_CARD_TYPE_SD1:
+        Serial.println("SD1");
+        break;
+      case SD_CARD_TYPE_SD2:
+        Serial.println("SD2");
+        break;
+      case SD_CARD_TYPE_SDHC:
+        Serial.println("SDHC");
+        break;
+      default:
+        Serial.println("Unknown");
+    }
   }
-    
-  randomSeed(analogRead(1));
-
-  Serial.println("Initializing SD card..."); Serial.flush();
-  pinMode(10, OUTPUT);
-
-  loadSounds();
+  randomSeed(analogRead(LDR_ChipSelectPin)); // READ lIGHT LEVEL
 }
 
-void loop() {
-  // Day(D) or Night(N)
-  char when = 'D'; // 'N'; // null;
-  // Determine the amount of light present to evaluate the day vs night settings.
-  // We also build in some tolerence if the photocell is missing or broken so the mode defaults to D
-  int pPin = analogRead(PHOTOCELL_PIN);
-  Serial.print("Photocell (0-1023): "); Serial.flush();
-  Serial.println(pPin); Serial.flush();
+void loop(void) {
 
-  if(pPin < 200) {
+  // Next determine the amount of light present to evaluate the day vs night settings.
+  // We also build in some tolerance if the photocell is missing or broken so default to T
+  // Day(D) or Twighlight(T) or Night(N)
+  char when = 'T'; // set default to Twilight (Dusk/Dawn) not to be too intrusive at night
+  int LPin = analogRead(LDR_ChipSelectPin);
+  Serial.print("Photocell Reading (0-1023) is ");
+  Serial.println(LPin); Serial.flush();
+
+  // set random amount of wait time between birdcall clip loops
+  unsigned long waitTime = 10000; // initially set to 10 seconds
+  if (LPin > 200) {
+    when = 'D';
+    // Daytime set 5 - 25 minutes
+    waitTime = (random(300, 1500) * 1000);
+    loadSoundsDay();  // Load Daytime defined sound clips
+  }
+  else if (LPin > 30) {
+    when = 'T';
+    // Twilight or Dusk/Dawn set 30 - 60 minutes
+    waitTime = (random(1800, 3600) * 1000);
+    loadSoundsDawnDusk(); // Load DawnDusk defined sound clips
+  }
+  else {
     when = 'N';
+    // Night Time set 90 - 160 minutes
+    waitTime = (random(5400, 9600) * 1000);
+    loadSoundsNight(); // Load Night Time defined sound clips
   }
-
-  if(pPin > 30) {
-    playRandomWavFile(when);
-  }
-  // else - It is really dark out, so we won't play any sounds right now. 
-  // People want to sleep too. :-)
-  
-  // random amount of wait time between calls
-  unsigned long waitTime = 10000;
-  if('D' == when) {
-    // 10 - 30 minutes
-    waitTime = (random(600,1800) * 1000);
-  }
-  else if('N' == when){
-    // 30 - 60 minutes
-    waitTime = (random(1800,3600) * 1000);
-  }
-  if(DEBUG) {
+  if (DEBUG) {
     // override to 10 seconds
     waitTime = 10000;
   }
-  Serial.print("waitTime: "); Serial.flush();
-  Serial.println(waitTime); Serial.flush();
+
+  playRandomWavFile(when);
+  int mins = int(waitTime / 60000);
+  int secs = int((waitTime - (mins * 60000)) / 1000);
+  Serial.print("Waiting for: ");
+  Serial.print(mins);
+  Serial.print(" min(s) ");
+  Serial.print(secs);
+  Serial.println(" sec{s)");
+  Serial.println("------------------=-----------------");
+  Serial.flush();
   delay(waitTime);
+
+  Serial.print("Free Ram: "); Serial.flush();
+  Serial.println(freeRam()); Serial.flush();
 }
 
-void loadSounds() {
-  data[0].put("1.wav",5,5,7,4);
-  data[1].put("2.wav",7,5,24,2);
-  data[2].put("3.wav",8,5,22,2);
-  //data[3].put("4.wav",16,10,16,2);  // 4.wav is broken, using 11 instead
-  data[3].put("11.wav",16,10,15,3);
-  data[4].put("5.wav",8,5,3,8);
-  data[5].put("6.wav",2,22,17,2);
-  data[6].put("7.wav",8,5,14,3);
-  data[7].put("8.wav",17,10,15,3);
-  //data[8].put("9.wav",7,5,3,7);  // 9.wav is broken, using 5 instead
-  data[8].put("5.wav",7,5,3,8);
-  data[9].put("10.wav",4,18,28,2);
-  data[10].put("11.wav",18,10,15,3);
-/*
-  data[0] = &BirdData("blackbird-splutter.wav",5,5,30,2);
-  data[1] = &BirdData("hawk1.wav",7,5,30,2);
-  data[2] = &BirdData("red-tailed-hawk-scream.wav",8,5,30,2);
-  data[3] = &BirdData("robin-distress.wav",16,10,30,2);
-  data[4] = &BirdData("blackbird-warning.wav",8,5,30,2);
-  data[5] = &BirdData("owl-agitated.wav",2,22,30,2);
-  data[6] = &BirdData("red-tailed-hawk2.wav",8,5,30,2);
-  data[7] = &BirdData("robin-warning.wav",17,10,30,2);
-  data[8] = &BirdData("falcon.wav",7,5,30,2);
-  data[9] = &BirdData("owl-contact.wav",4,18,30,2);
-  data[10] = &BirdData("robin-alarm.wav",18,10,30,2);
-*/
+void loadSoundsDay() {
+  data[0].put(1, 18, 5, 5, 6);
+  data[1].put(2, 12, 5, 21, 2);
+  data[2].put(5, 12, 5, 1, 20);
+  data[2].put(15, 5, 18, 83, 1);
+  data[3].put(8, 12, 5, 13, 4);
+  data[4].put(11, 18, 5, 13, 4);
+  data[5].put(12, 9, 5, 32, 2);
+  data[6].put(14, 14, 8, 10, 5);
+  data[7].put(15, 15, 8, 83, 1);
+  data[8].put(20, 10, 5, 86 , 1);
+  data[9].put(21, 18, 5, 41, 2);
+  data[10].put(22, 18, 5, 58, 3);
+  return;
+}
+
+void loadSoundsDawnDusk() {
+  data[0].put(6, 5, 18, 14, 3);
+  data[1].put(14, 18, 5, 10, 5);
+  data[2].put(15, 5, 18, 83, 1);
+  data[3].put(18, 5, 15, 65, 1);
+  data[4].put(19, 7, 16, 89, 1);
+  data[5].put(21, 18, 5, 41, 2);
+  data[6].put(22, 5, 15, 58, 1);
+  data[7].put(24, 5, 18, 32, 3);
+  data[8].put(25, 5, 18, 65, 1);
+  data[9].put(15, 5, 18, 83, 1);
+  data[10].put(22, 5, 15, 58, 1);
+  return;
+}
+
+void loadSoundsNight() {
+  data[0].put(6, 5, 18, 15, 3);
+  data[1].put(18, 5, 15, 65, 2);
+  data[2].put(19, 7, 16, 89, 1);
+  data[3].put(23, 5, 18, 4, 4);
+  data[4].put(24, 5, 18, 32, 2);
+  data[5].put(25, 5, 18, 65, 1);
+  data[6].put(6, 5, 18, 15, 4);
+  data[7].put(18, 5, 15, 65, 1);
+  data[8].put(19, 5, 18, 83, 1);
+  data[9].put(24, 5, 18, 32, 3);
+  data[10].put(25, 5, 18, 65, 1);
+  return;
 }
 
 void playRandomWavFile(char when) {
+  unsigned long maxTimesStart = 6;
   unsigned long rand = random(sumWeights(when));
-  unsigned long maxTimesStart = 16;
-
   unsigned long runningWeights = 0;
-  for(unsigned int w = 0; w < DATA_SIZE; w++) {
+  if (when == 'N') {
+    // repeat less at night
+    maxTimesStart = 2;
+  }
+  for (unsigned int w = 0; w < DATA_SIZE; w++) {
     runningWeights += data[w].getWeight(when);
-    if(rand < runningWeights) {
-      unsigned int maxTimes = (maxTimesStart+data[w].getMinTimes());
-      playSound(data[w].getWavFile(), data[w].getDuration(), random(data[w].getMinTimes(), maxTimes));
+    if (rand < runningWeights) {
+      unsigned int maxTimes = (maxTimesStart + data[w].getMinTimes());
+      playSound(data[w].getWavNr(), data[w].getDuration(), random(data[w].getMinTimes(), maxTimes), when);
       break;
     }
   }
+  return;
 }
 
 long sumWeights(char when) {
   unsigned long weights = 0;
-  for(unsigned int w = 0; w < DATA_SIZE; w++) {
-    weights+=data[w].getWeight(when);
+  for (unsigned int w = 0; w < DATA_SIZE; w++) {
+    weights += data[w].getWeight(when);
   }
   return weights;
 }
 
-void playSound(char* wavFile, int duration, long times){
+void playSound(int wavNr, long duration, long times, char when) {
+  String wavFile = (String(wavNr) + EXT);  // set wavFile to wavNr (an Integer) to file number as a text String with .wav extension
+  duration = duration * 1000;  // set length of clip as duration in Milliseconds
+  Serial.print("Output volume is set to: ");
+  Serial.println(AUDIO_Volume);
   Serial.print("Playing ");
   Serial.print(wavFile);
   Serial.print(" ");
   Serial.print(times);
-  Serial.println(" times. "); Serial.flush();
-  Serial.print("duration: ");
-  Serial.println(duration); Serial.flush();
-    
-  for(unsigned long i = 0; i < times; i++) {
-    Serial.println(i); Serial.flush();
-    // load the sound file
-    SdPlay.setFile(wavFile);
-    SdPlay.worker();
-    // play the sound file
-    SdPlay.play();
+  Serial.println(" time(s); ");
+  Serial.print("Sound clip duration is ");
+  Serial.print(duration / 1000);
+  Serial.println(" seconds.");
+  Serial.print("Clip has been randomly selected from the '");
+  Serial.print(when);
+  Serial.println("' dataset.");
+  Serial.flush();
+
+  //
+  // if using active speaker/amplifier use 100nf and 100K resistor in series from digital pin output connected to audio line input
+  // -------||-------\/\/\/\/-----o Line in O---\/\/\/\/----GND
+  //       100Nf     10K ohms                    1K ohms
+  // Use pins 9 and 10 to feed separate line inputs to two channel amplifier, each channel wired as above
+  // Better use a 16Bit DAC to create an analogue signal(s) to feed amplifier
+  //
+  audio.setVolume(AUDIO_Volume);  // reset output volume
+  audio.loop(1);  // set loop play function on, this avoids the pop that can otherwise occur between the clips
+  audio.play(wavFile.c_str());  // start loop playing
+  for (unsigned long i = 0; i < times; i++) {
+    // print progress of timing loop
+    Serial.print("Looping - this clip is no. ");
+    Serial.print(i + 1);
+    Serial.print(" of ");
+    Serial.println(times);
     Serial.flush();
-    delay(duration * 1000);
-    SdPlay.stop();
-    int sdStatus = SdPlay.getLastError();
-    if(sdStatus != 0) {
-      Serial.print("SD Card Error Status: ");
-      Serial.println(sdStatus); Serial.flush();
-      resetFunc();
-    }
+    delay(duration); // wait for clip to finish before continuing
   }
-  
-  Serial.print("Free Ram: "); Serial.flush();
-  Serial.println(freeRam()); Serial.flush();
-
+  delay(100);
+  audio.loop(0);  // set play loop function off
+  Serial.println("Now finished current clip output.");
+  Serial.flush();
+  delay(100);
+  return;
 }
-
