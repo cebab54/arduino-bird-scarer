@@ -1,6 +1,10 @@
 # arduino-bird-scarer
-Code for an Arduino project to scare birds away. It uses several sound files played at random intervals.
+Code for an Arduino project to scare birds away based upon initial ideas and development by Nick Allen in 2015. It uses several sound files played at random intervals.
 
-This project is just in the prototyping stages right now. I have a working model, but there are several improvements that still need to be made. I am running the sketch on an Arduino Nano compatible microcontroller, using an SD Card and it's shield with a photocell in an old computer speaker. I am using the <a href="http://www.hackerspace-ffm.de/wiki/index.php?title=SimpleSDAudio">SimpleSDAudio library (v1.03)</a> as well.
+This fork of the project uses the latest TMRpcm library and works as found here on the Arduino UNO R3 (and with mods for (Mega and Nano). 
 
-One more note, it has been almost 15 years since I have written C style code, so my code isn't very pretty. On a positive note, I do write Java code, bash scripts and a handful of other languages nearly everyday, so I do have a good understanding of programming languages.
+I am running the sketch on an Arduino UNO release 3 board, using an SD Card and it's shield with a photocell and a 5v Class D amplifier with old Radio speakers. 
+
+One benefit of using the TMRpcm library instead of the original SimpleSDAudio library is that it seems less heavy on use of RAM and also allows looping of Audio (WAV) clips which in turn avoids the Clicks/Pops found at the start of each recurrence  of an Audio playback using SimpleSDAudio.  The Author of TMRpcm library also has spent considerable time reducing the initial clicks, which he says are in part caused by the METADATA in the sound files.  Certainly the results are much quieter, in my experiments.
+
+Just need to field test the results to scare the birds from my 2020 Cherry Crop!

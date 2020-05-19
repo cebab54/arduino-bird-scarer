@@ -7,17 +7,16 @@
 #define SD_ChipSelectPin 4  // amend digital pin number if applicable
 #define LDR_ChipSelectPin 0 // amend analogue pin number if applicable
 #define DIGI_SpeakerPin 9   // choose one of pins 5,6,11 or 46 on the Mega, or pin 9 on Uno, Nano, etc
-#define AUDIO_Volume 1      // amend output pin volume to suit your audio setup (range is 0-7)
+#define AUDIO_Volume 3      // amend output pin volume to suit your audio setup (range is 0-7)
                             // generally I found that 3 is maximum without distortion from an Amplifier
 
-#define EXT ".wav"          // Sound clips should be saved using Audacity (Freeware) as 8 bit mono 'wav' clips sampled at 32000Hz
-                            // Please make sure that sound clips do NOT contain any METADATA (Reset and Clear all fields)
+#define EXT ".wav"          // Sound clips should be saved using Audacity (Freeware) as mono 'wav' clips sampled at 32000Hz
+                            // Sound clips should NOT contain any METADATA (Reset and Clear all fields) this helps to avoid click at start
                             // In Audacity, "File/Export/Export as WAV". File should be named as per DOS 8.3 format for SD Card formatted to FAT16
                             // Export clips using dropdown option "Save as Type" set to: 'Other uncompressed files' and with
                             // Header set to: "WAV (Microsoft)"; and Encoding set to: "unsigned 8-bit PCM".
 
-Sd2Card card;               // SD Card (Maximum Partition size 4GB) should be freshly formatted using 'Overwrite format' (NOT Fast Format) to FAT16
-                            // using SD Association's "SD Card Formatter" (Freeware)
+Sd2Card card;               // SD Card should be freshly formatted using 'Overwrite format' (NOT Fast Format) using SD Association's "SD Card Formatter" (Freeware)
 TMRpcm audio;
 
 const unsigned int DATA_SIZE = 11;
