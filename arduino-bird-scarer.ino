@@ -8,13 +8,13 @@
 #define LDR_ChipSelectPin 0 // amend analogue pin number if applicable
 #define DIGI_SpeakerPin 9   // choose one of pins 5,6,11 or 46 on the Mega, or pin 9 on Uno, Nano, etc
 #define AUDIO_Volume 3      // amend output pin volume to suit your audio setup (range is 0-7)
-                            // generally I found that 3 is maximum without distortion from an Amplifier
+// generally found that 3 is maximum without distortion or too much noise from an Amplifier
 
 #define EXT ".wav"          // Sound clips should be saved using Audacity (Freeware) as mono 'wav' clips sampled at 32000Hz
-                            // Sound clips should NOT contain any METADATA (Reset and Clear all fields) this helps to avoid click at start
-                            // In Audacity, "File/Export/Export as WAV". File should be named as per DOS 8.3 format for SD Card formatted to FAT16
-                            // Export clips using dropdown option "Save as Type" set to: 'Other uncompressed files' and with
-                            // Header set to: "WAV (Microsoft)"; and Encoding set to: "unsigned 8-bit PCM".
+// Sound clips should NOT contain any METADATA (Reset and Clear all fields) this helps to avoid click at start
+// In Audacity, "File/Export/Export as WAV". File should be named as per DOS 8.3 format for SD Card formatted to FAT16
+// Export clips using dropdown option "Save as Type" set to: 'Other uncompressed files' and with
+// Header set to: "WAV (Microsoft)"; and Encoding set to: "unsigned 8-bit PCM".
 
 Sd2Card card;               // SD Card should be freshly formatted using 'Overwrite format' (NOT Fast Format) using SD Association's "SD Card Formatter" (Freeware)
 TMRpcm audio;
@@ -35,6 +35,7 @@ void(* resetFunc) (void) = 0; //declare reset function at address 0
 void setup() {
 
   audio.speakerPin = DIGI_SpeakerPin;
+  audio.setVolume(AUDIO_Volume);  // reset output volume
   Serial.begin(115200);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
@@ -121,6 +122,8 @@ void loop(void) {
 }
 
 void loadSoundsDay() {
+  // edit to load Daytime sound clips, see next line and the details in files.xls
+  // (Wav name [mustbe an integer] excl extension, Daytime Weghting, Nighttime weighting, Clip duration in seconds, minimum number of repeats)
   data[0].put(1, 18, 5, 5, 6);
   data[1].put(2, 12, 5, 21, 2);
   data[2].put(5, 12, 5, 1, 20);
@@ -137,6 +140,8 @@ void loadSoundsDay() {
 }
 
 void loadSoundsDawnDusk() {
+  // edit to load Dawn/Dusk sound clips, see next line and the details in files.xls
+  // (Wav name [mustbe an integer] excl extension, Daytime Weghting, Nighttime weighting, Clip duration in seconds, minimum number of repeats)
   data[0].put(6, 5, 18, 14, 3);
   data[1].put(14, 18, 5, 10, 5);
   data[2].put(15, 5, 18, 83, 1);
@@ -152,6 +157,8 @@ void loadSoundsDawnDusk() {
 }
 
 void loadSoundsNight() {
+  // edit to load Night time sound clips, see next line and the details in files.xls
+  // (Wav name [mustbe an integer] excl extension, Daytime Weghting, Nighttime weighting, Clip duration in seconds, minimum number of repeats)
   data[0].put(6, 5, 18, 15, 3);
   data[1].put(18, 5, 15, 65, 2);
   data[2].put(19, 7, 16, 89, 1);
@@ -198,19 +205,7 @@ void playSound(int wavNr, long duration, long times, char when) {
   duration = duration * 1000;  // set length of clip as duration in Milliseconds
   Serial.print("Output volume is set to: ");
   Serial.println(AUDIO_Volume);
-  Serial.print("Playing ");
-  Serial.print(wavFile);
-  Serial.print(" ");
-  Serial.print(times);
-  Serial.println(" time(s); ");
-  Serial.print("Sound clip duration is ");
-  Serial.print(duration / 1000);
-  Serial.println(" seconds.");
-  Serial.print("Clip has been randomly selected from the '");
-  Serial.print(when);
-  Serial.println("' dataset.");
   Serial.flush();
-
   //
   // if using active speaker/amplifier use 100nf and 100K resistor in series from digital pin output connected to audio line input
   // -------||-------\/\/\/\/-----o Line in O---\/\/\/\/----GND
@@ -218,22 +213,39 @@ void playSound(int wavNr, long duration, long times, char when) {
   // Use pins 9 and 10 to feed separate line inputs to two channel amplifier, each channel wired as above
   // Better use a 16Bit DAC to create an analogue signal(s) to feed amplifier
   //
-  audio.setVolume(AUDIO_Volume);  // reset output volume
-  audio.loop(1);  // set loop play function on, this avoids the pop that can otherwise occur between the clips
-  audio.play(wavFile.c_str());  // start loop playing
-  for (unsigned long i = 0; i < times; i++) {
-    // print progress of timing loop
-    Serial.print("Looping - this clip is no. ");
-    Serial.print(i + 1);
-    Serial.print(" of ");
-    Serial.println(times);
+  if (when != 'N') {  // if Night sounds required then delete this line 216 and lines 245-249 inclusive
+    Serial.print("Playing ");
+    Serial.print(wavFile);
+    Serial.print(" ");
+    Serial.print(times);
+    Serial.println(" time(s); ");
+    Serial.print("Sound clip duration is ");
+    Serial.print(duration / 1000);
+    Serial.println(" seconds.");
+    Serial.print("Clip has been randomly selected from the '");
+    Serial.print(when);
+    Serial.println("' dataset.");
     Serial.flush();
-    delay(duration); // wait for clip to finish before continuing
+    audio.loop(1);  // set loop play function on, this avoids the pop that can otherwise occur between the clips
+    audio.play(wavFile.c_str());  // start loop playing
+    for (unsigned long i = 0; i < times; i++) {
+      // print progress of timing loop
+      Serial.print("Looping - this clip is no. ");
+      Serial.print(i + 1);
+      Serial.print(" of ");
+      Serial.println(times);
+      Serial.flush();
+      delay(duration); // wait for clip to finish before continuing
+    }
+    delay(100);
+    audio.loop(0);  // set play loop function off
+    Serial.println("Now finished current clip output.");
+    Serial.flush();
+    delay(100);
+  } else {
+    Serial.println("Night mode: No sounds to loop.");
+    Serial.flush();
+    delay(100);
   }
-  delay(100);
-  audio.loop(0);  // set play loop function off
-  Serial.println("Now finished current clip output.");
-  Serial.flush();
-  delay(100);
   return;
 }
