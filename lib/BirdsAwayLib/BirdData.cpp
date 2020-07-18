@@ -4,7 +4,7 @@
 BirdData::BirdData(){
 }
 
-BirdData::BirdData(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
+BirdData::BirdData(char* wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
   _wavNr = wavNr;
   _dayWeight = dayWeight;
   _nightWeight = nightWeight;
@@ -15,7 +15,7 @@ BirdData::BirdData(int wavNr, int dayWeight, int nightWeight, int duration, int 
 //<<destructor>>
 BirdData::~BirdData(){/*nothing to destruct*/}
  
-void BirdData::put(int wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
+void BirdData::put(char* wavNr, int dayWeight, int nightWeight, int duration, int minTimes){
   _wavNr = wavNr;
   _dayWeight = dayWeight;
   _nightWeight = nightWeight;
@@ -24,12 +24,12 @@ void BirdData::put(int wavNr, int dayWeight, int nightWeight, int duration, int 
 }
 
 // get _wavNr
-int BirdData::getWavNr(){
+char* BirdData::getWavNr(){
   return _wavNr;
 }
 
 // set _wavNr
-void BirdData::setWavNr(int wavNr){
+void BirdData::setWavNr(char* wavNr){
   _wavNr = wavNr;
 }
 
@@ -37,13 +37,13 @@ void BirdData::setWavNr(int wavNr){
 int BirdData::getWeight(char when){
   if('N' == when) {
     return _nightWeight;
-  }
-  else {
+  } else {
+  // either day or dusk should return dayweight
     return _dayWeight;
   }
 }
 
-// set _dayWeight
+// set _dayWeight (Day or Dusk)
 void BirdData::setDayWeight(int dayWeight){
   _dayWeight = dayWeight;
 }
